@@ -1,0 +1,56 @@
+
+services:
+  postgresql:
+      container_name: postgresql
+      hostname: postgresql
+      image: postgres:12-alpine
+      restart: unless-stopped
+      environment:
+        POSTGRES_DB: dkr
+        POSTGRES_USER: postgreuser1
+        POSTGRES_PASSWORD: 12345
+        PGDATA: /var/lib/postgresql/data
+      volumes:
+        - ./pgs_volume:/var/lib/postgresql/data
+      networks:
+        - pg-net
+
+  pgadmin4:
+    container_name: pgadmin4
+    hostname: pgadmin4
+    image: dpage/pgadmin4:8.6
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: xxx@xxmail.com
+      PGADMIN_DEFAULT_PASSWORD: 12345
+    ports:
+    - "5050:80"
+    volumes:
+    - ./pgadmin_server:/pgadmin4/servers.json
+    - ./pgadmin_volume:/var/lib/pgadmin
+    depends_on:
+      - postgresql
+    networks:
+      - pg-net
+
+  pgs_app:
+    container_name: pgs_app
+    image: pgs_app:latest
+    restart: always
+    environment:
+      POSTGRES_HOST: postgresql
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: dkr
+      POSTGRES_USER: postgreuser1
+      POSTGRES_PASSWORD: 12345
+    depends_on:
+      - postgresql
+    networks:
+      - pg-net
+
+networks:
+  pg-net:
+volumes:
+  pgadmin_volume:
+  pgs_volume:
+  pgadmin_server:

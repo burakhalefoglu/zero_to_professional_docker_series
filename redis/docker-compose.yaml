@@ -1,0 +1,49 @@
+# docker network create redis-network
+name: redis-group
+services:
+  redis:
+    container_name: redis_host
+    hostname: redis_host
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning --requirepass 12345
+    volumes:
+      - ./redis:/data
+    networks:
+      - redis-network
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      REDIS_PORT: 6379
+      REDIS_HOST: redis_host
+      REDIS_PASSWORD: 12345
+    ports:
+    - "8081:8081"
+    networks:
+      - redis-network 
+    depends_on: 
+      - redis
+
+  redis_app:
+    container_name: redis_app
+    image: redis_app:latest
+    restart: always
+    environment:
+      REDIS_PORT: 6379
+      REDIS_HOST: redis_host
+      REDIS_PASSWORD: 12345
+    networks:
+      - redis-network
+    depends_on:
+      - redis
+
+networks:
+  redis-network:
+volumes:
+  redis:

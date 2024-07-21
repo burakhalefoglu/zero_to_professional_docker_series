@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    container_name: mysql
+    hostname: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: dckr
+      MYSQL_USER: mysqluser1
+      MYSQL_PASSWORD: 12345
+    volumes:
+      - ./mysql_volume:/var/lib/mysql
+    networks:
+      - wp-net
+
+  wordpress:
+    image: wordpress:6.4.2
+    restart: unless-stopped
+    hostname: wordpress
+    container_name: wordpress
+    ports:
+      - "8082:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: mysqluser1
+      WORDPRESS_DB_PASSWORD: 12345
+      WORDPRESS_DB_NAME: dckr
+      WORDPRESS_TABLE_PREFIX: dckr_
+    volumes:
+      - ./wp_volume:/var/www/html
+    networks:
+      - wp-net
+
+  adminer:
+    container_name: adminer
+    hostname: adminer
+    image: adminer
+    restart: always
+    ports:
+      - "5051:8080"
+    networks:
+      - wp-net
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    hostname: phpmyadmin
+    container_name: phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: 123456
+    networks:
+      - wp-net
+
+  mysql_app:
+    container_name: mysql_app
+    hostname: mysql_app
+    image: mysql_app:latest
+    restart: no
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: dckr
+      MYSQL_USER: mysqluser1
+      MYSQL_PASSWORD: 12345
+    volumes:
+      - ./wp_volume:/var/www/html
+    networks:
+      - wp-net
+
+networks:
+  wp-net:
+volumes:
+  mysql_volume:
+  phpmyadmin_volume:
+  wp_volume:

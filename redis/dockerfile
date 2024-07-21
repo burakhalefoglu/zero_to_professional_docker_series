@@ -1,0 +1,17 @@
+FROM python:3.9
+
+LABEL version="1.0"
+LABEL description="Dockerfile for Redis Conn App"
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+COPY main.py main.py
+
+ENV REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
+
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+ENTRYPOINT [ "python" ]
+CMD ["main.py"] 
