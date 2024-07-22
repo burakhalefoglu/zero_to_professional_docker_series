@@ -1,0 +1,14 @@
+# Base image
+FROM alpine:latest
+
+# Install bash and curl
+RUN apk add --no-cache bash curl jq
+
+# Copy the log generator script
+COPY generate_logs.sh /usr/local/bin/generate_logs.sh
+
+# Make the script executable
+RUN chmod +x /usr/local/bin/generate_logs.sh
+
+# Command to run the log generator script
+CMD ["/usr/local/bin/generate_logs.sh"]
