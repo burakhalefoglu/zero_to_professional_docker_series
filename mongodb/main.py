@@ -1,46 +1,62 @@
 import os
 import pymongo
 
-
-MONGO_HOST = os.environ["MONGO_HOST"]
-MONGO_PORT = os.environ["MONGO_PORT"]
-MONGO_DB = os.environ["MONGO_DB"]
-MONGO_USER = os.environ["MONGO_USER"]
-MONGO_PASSWORD = os.environ["MONGO_PASSWORD"]
+MONGO_HOST = os.environ.get("MONGO_HOST")
+MONGO_PORT = os.environ.get("MONGO_PORT")
+MONGO_DB = os.environ.get("MONGO_DB")
+MONGO_USER = os.environ.get("MONGO_USER")
+MONGO_PASSWORD = os.environ.get("MONGO_PASSWORD")
 
 def get_connection():
-    client = pymongo.MongoClient(f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/")
+    # mongodb://<username>:<password>@<host>:<port>
+    connection_string = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}"
+    client = pymongo.MongoClient(connection_string)
     db = client[MONGO_DB]
-    mycol = db["users"]
-    return mycol
+    col = db["users"]
+    return col
 
-def create_user(name, surname):
-    mycol = get_connection()
-    mydict = {"name": name, "surname": surname}
-    x = mycol.insert_one(mydict)
-    return x.inserted_id
+# CRUD
 
-def update_user(user_id, name, surname):
-    mycol = get_connection()
-    myquery = {"_id": user_id}
-    newvalues = {"$set": {"name": name, "surname": surname}}
-    mycol.update_one(myquery, newvalues)
+## create
+def create_user(name:str, surname:str) -> str:
+    col = get_connection()
+    user_dic = {"name": name, "surname": surname}
+    result = col.insert_one(user_dic)
+    return result.inserted_id
 
-def delete_user(user_id):
-    mycol = get_connection()
-    myquery = {"_id": user_id}
-    mycol.delete_one(myquery)
+## read
+def get_user(user_id:str) -> dict:
+    col = get_connection()
+    result = col.find_one({"_id": user_id})
+    return result
 
-def read_user_by_id(user_id):
-    mycol = get_connection()
-    myquery = {"_id": user_id}
-    mydoc = mycol.find_one(myquery)
-    return mydoc
+## update
+def update_or_crate(user_id: str, name: str, surname: str):
+    col = get_connection()
+    result = col.update_one({"_id": user_id}, {"$set": {"name": name, "surname": surname}})
+    return result.upserted_id
+
+## delete
+def delete_user(user_id: str):
+    col = get_connection()
+    result = col.delete_one({"_id": user_id})
+    return result
 
 if __name__ == "__main__":
-    create_user("Burak", "Halefoglu")
-    user_2_id = create_user("Ahmet", "Mehmet")
-    print(read_user_by_id(user_2_id))
-    update_user(user_2_id, "Ahmet", "Halefoglu")
-    delete_user(user_2_id)
-    print(read_user_by_id(user_2_id))
+    inserted_id = create_user("Burak", "Halefoğlu")
+    inserted_id_2 = create_user("Ahmet", "Halefoğlu")
+    print("eklenen veriler id'si", inserted_id, inserted_id_2)
+
+    user1 = get_user(inserted_id)
+    print(user1)
+
+    user2 = get_user(inserted_id_2)
+    print(user2)
+
+    update_or_crate(inserted_id_2, "Hasan", "KARACA")
+    user2 = get_user(inserted_id_2)
+    print(user2)
+
+    delete_user(inserted_id_2)
+    user2 = get_user(inserted_id_2)
+    print(user2)

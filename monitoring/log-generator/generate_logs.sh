@@ -12,7 +12,6 @@ generate_log() {
 }
 
 while true; do
-  log=$(generate_log)
-  echo "$log" | nc logstash 5000
+  generate_log
   sleep 1
-done 
+done

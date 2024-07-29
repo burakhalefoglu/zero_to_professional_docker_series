@@ -1,0 +1,208 @@
+# before:
+# docker network create loki-net
+# docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
+
+
+#after
+# docker-compose -f docker-compose.yaml up -d
+name: burak
+services:
+
+# MONITORING SECTION
+  grafana:
+    container_name: grafana
+    hostname: grafana
+    image: grafana/grafana:8.2.6
+    environment:
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_SECURITY_ALLOW_EMBEDDING: true
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_AUTH_BASIC_ENABLED: true
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    restart: always
+    ports:
+      - 5000:3000
+    networks:
+      - loki-net
+    labels:
+      org.label-schema.group: "monitoring"
+    depends_on:
+      - loki
+      - prometheus
+
+  pushgateway:
+    image: prom/pushgateway:v1.2.0
+    container_name: pushgateway
+    hostname: pushgateway
+    restart: always
+    expose:
+      - 9091
+    networks:
+      - loki-net
+    labels:
+      org.label-schema.group: "monitoring"
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+        loki-external-labels: job=dockerlogs,owner=burak,environment=development
+
+  loki:
+    container_name: loki
+    hostname: loki
+    image: grafana/loki:2.9.0
+    restart: always
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - loki-net
+
+  promtail:
+    container_name: promtail
+    hostname: promptil
+    image: grafana/promtail:2.9.0
+    restart: always
+    volumes:
+      - ./grafana/config/promtail.yaml:/etc/promtail/docker-config.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/docker-config.yaml
+    networks:
+      - loki-net
+
+  prometheus:
+    image: prom/prometheus:v2.17.1
+    container_name: prometheus
+    hostname: prometheus
+    user: root
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - ./volume/prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: always
+    expose:
+      - 9090
+    labels:
+      org.label-schema.group: "monitoring"
+    networks:
+      - loki-net
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+        loki-external-labels: job=dockerlogs,owner=burak,environment=development
+
+
+  alertmanager:
+    image: prom/alertmanager:v0.20.0
+    container_name: alertmanager
+    hostname: alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    restart: always
+    expose:
+    - 9093
+    labels:
+      org.label-schema.group: "monitoring"
+    networks:
+      - loki-net
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+        loki-external-labels: job=dockerlogs,owner=burak,environment=development
+
+
+  nodeexporter:
+    image: prom/node-exporter:v0.18.1
+    container_name: nodeexporter
+    hostname: nodeexporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: always
+    ports:
+    - "9100:9100"
+    networks:
+      - loki-net
+    labels:
+      org.label-schema.group: "monitoring"
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+        loki-external-labels: job=dockerlogs,owner=burak,environment=development
+
+
+  cadvisor:
+    image: gcr.io/google-containers/cadvisor:v0.34.0
+    container_name: cadvisor
+    hostname: cadvisor
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+
+
+      #- /cgroup:/cgroup:ro #doesn't work on MacOS only for Linux
+    restart: always
+    ports:
+      - "8080:8080"
+    labels:
+      org.label-schema.group: "monitoring"
+    deploy:
+      mode: global
+    networks:
+      - loki-net
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+        loki-external-labels: job=dockerlogs,owner=burak,environment=development
+
+  log-generator:
+    build: ./log-generator
+    container_name: log-generator
+    hostname: log-generator
+    restart: always
+    labels:
+      org.label-schema.group: "monitoring"
+    networks:
+      - loki-net
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+        loki-external-labels: job=dockerlogs,owner=burak,environment=development
+
+#CONFIGS
+networks:
+  loki-net:
+volumes:
+  prometheus_data:
