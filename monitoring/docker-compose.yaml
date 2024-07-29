@@ -154,7 +154,6 @@ services:
         loki-url: http://localhost:3100/loki/api/v1/push
         loki-external-labels: job=dockerlogs,owner=burak,environment=development
 
-
   cadvisor:
     image: gcr.io/google-containers/cadvisor:v0.34.0
     container_name: cadvisor
