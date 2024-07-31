@@ -1,0 +1,36 @@
+
+version: '3.7'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # RabbitMQ için
+      - "15672:15672"  # RabbitMQ Management Plugin için
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+
+  producer:
+    build:
+      context: ./producer
+    container_name: producer
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+
+  consumer:
+    build:
+      context: ./consumer
+    container_name: consumer
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+
+networks:
+  default:
+    name: rabbitmq-network
+    driver: bridge

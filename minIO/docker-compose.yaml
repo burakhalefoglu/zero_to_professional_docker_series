@@ -1,0 +1,45 @@
+version: '3.7'
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - ./minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    networks:
+      - minio-net
+
+  minio-console:
+    image: minio/mc:latest
+    container_name: minio-console
+    environment:
+      MINIO_SERVER: http://minio:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    entrypoint: >
+      sh -c "
+      while ! curl -s ${MINIO_SERVER}; do
+        echo waiting for minio server;
+        sleep 2;
+      done;
+      mc alias set myminio ${MINIO_SERVER} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+      mc admin user add myminio consoleuser consolepass &&
+      mc admin policy set myminio consoleuser admin
+      "
+    depends_on:
+      - minio
+    networks:
+      - minio-net
+
+networks:
+  minio-net:
+
+volumes:
+  minio_data:
