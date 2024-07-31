@@ -9,10 +9,12 @@ consumer = KafkaConsumer(
     "test_topic",
     bootstrap_servers=[os.getenv('KAFKA_BOOTSTRAP_SERVERS')],
     auto_offset_reset='earliest',
-    group_id='consumer-group-a',
+    enable_auto_commit=False,
+    group_id='consumer-group',
     value_deserializer=json_deserializer
 )
 
 if __name__ == "__main__":
     for message in consumer:
         print(f"Received: {message.value}")
+        consumer.commit()
